@@ -1,6 +1,6 @@
 import streamlit as st
 from groq import Groq
-from functions import get_secret
+from functions import get_secret, reset_chat
 
 # Load Groq API key
 api_key = get_secret("GROQ_API_KEY")
@@ -16,13 +16,29 @@ if not st.session_state.chat_history:
         {"role": "assistant", "content": "Hi! How can I help you?"}
     )
 
+temperature = st.sidebar.slider(
+    label="Select the temperature",
+    min_value=0.0,
+    max_value=2.0,
+    value=1.0
+)
+
+
+if st.sidebar.button("Reset chat"):
+    reset_chat()
+
 # Display existing chat messages
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        
+
 
 # Take user input
 user_message = st.chat_input("Type your message...")
+
+for message in st.session_state.chat_history:
+    st.chat_message(message["role"]).write(message["content"])
 
 if user_message:
     # Display user message immediately
@@ -41,9 +57,11 @@ if user_message:
     
     # Generate assistant response from Groq
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages
-    )
+    model="llama-3.3-70b-versatile",
+    messages=messages,
+    temperature=temperature,
+    max_tokens=1000
+)
     
     assistant_reply = response.choices[0].message.content
     

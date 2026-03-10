@@ -8,3 +8,6 @@ def get_secret(key: str) -> str | None:
     except Exception:
         load_dotenv(override=True)  # override=True forces reload of .env
         return os.getenv(key)   # For local development
+    
+def reset_chat():
+    st.session_state.chat_history = []
