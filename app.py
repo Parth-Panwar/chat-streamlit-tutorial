@@ -1,21 +1,24 @@
 import streamlit as st
 from groq import Groq
-from functions import get_secret, reset_chat
+from functions import get_secret, reset_chat, language_selector
 
 # Load Groq API key
 api_key = get_secret("GROQ_API_KEY")
-print(f"API key loaded: {repr(api_key)}")  # Debug line
-client = Groq(api_key=api_key)  # Use the variable, not a hardcoded key
+client = Groq(api_key=api_key)
 
-# Initialize chat history
+# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+if "language" not in st.session_state:
+    st.session_state.language = "English"
 
 if not st.session_state.chat_history:
     st.session_state.chat_history.append(
         {"role": "assistant", "content": "Hi! How can I help you?"}
     )
 
+# Sidebar controls
 temperature = st.sidebar.slider(
     label="Select the temperature",
     min_value=0.0,
@@ -23,50 +26,41 @@ temperature = st.sidebar.slider(
     value=1.0
 )
 
+language = language_selector()
+
+if st.sidebar.button("Apply Language"):
+    st.session_state.language = language
+    reset_chat()
 
 if st.sidebar.button("Reset chat"):
     reset_chat()
 
 # Display existing chat messages
 for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        
-
+    st.chat_message(message["role"]).write(message["content"])
 
 # Take user input
 user_message = st.chat_input("Type your message...")
 
-for message in st.session_state.chat_history:
-    st.chat_message(message["role"]).write(message["content"])
-
 if user_message:
-    # Display user message immediately
     st.chat_message("user").write(user_message)
-    
-    # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": user_message})
-    
-    # Optional system prompt
-    system_prompt = """
+
+    system_prompt = f"""
     You are a friendly programming tutor.
     Always explain concepts in a simple and clear way, using examples when possible.
     If the user asks something unrelated to programming, politely bring the conversation back to programming topics.
+    Always respond in {st.session_state.language} If the language is Haryanvi, use authentic Haryanvi dialect and vocabulary, not just Hindi..
     """
     messages = [{"role": "system", "content": system_prompt}] + st.session_state.chat_history
-    
-    # Generate assistant response from Groq
+
     response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
-    messages=messages,
-    temperature=temperature,
-    max_tokens=1000
-)
-    
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        temperature=temperature,
+        max_tokens=1000
+    )
+
     assistant_reply = response.choices[0].message.content
-    
-    # Display assistant message
     st.chat_message("assistant").write(assistant_reply)
-    
-    # Append assistant reply to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
