@@ -1,6 +1,6 @@
 import streamlit as st
 from groq import Groq
-from functions import get_secret, reset_chat, language_selector
+from functions import get_secret, reset_chat, language_selector , save_chat, load_chat
 
 # Load Groq API key
 api_key = get_secret("GROQ_API_KEY")
@@ -49,8 +49,8 @@ if user_message:
     system_prompt = f"""
     You are a friendly programming tutor.
     Always explain concepts in a simple and clear way, using examples when possible.
-    If the user asks something unrelated to programming, politely bring the conversation back to programming topics.
-    Always respond in {st.session_state.language} If the language is Haryanvi, use authentic Haryanvi dialect and vocabulary, not just Hindi..
+    If the user asks something unrelated to programming, strictly tell the user to only ask programming-related questions.
+    Always respond in {st.session_state.language}.
     """
     messages = [{"role": "system", "content": system_prompt}] + st.session_state.chat_history
 
@@ -64,3 +64,16 @@ if user_message:
     assistant_reply = response.choices[0].message.content
     st.chat_message("assistant").write(assistant_reply)
     st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
+    
+    
+
+# Save chat
+if st.sidebar.button("💾 Save Chat"):
+    filename = save_chat(st.session_state.chat_history)
+    st.sidebar.success(f"Saved as {filename}")
+
+# Load chat
+uploaded_file = st.sidebar.file_uploader("📂 Load Chat", type="json")
+if uploaded_file:
+    st.session_state.chat_history = load_chat(uploaded_file)
+    st.rerun()
